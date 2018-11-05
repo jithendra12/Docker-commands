@@ -1,0 +1,192 @@
+
+--------------------------------------------------Docker Basics----------------------------------
+uname -r -- OS version
+cd /etc/yum.repos.d -- docker repo creation
+
+vim docker.repo:
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/7/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+
+yum update
+## debian and ubuntu -- install docker.io not docker engine (screen docker)
+yum install -y docker-engine
+systemctl enable docker
+systemctl start docker
+docker  --version
+docker images (connect to docker daemon and images in it)
+## have to be root to run docker daemon
+## in sudo su && cd /var/run -- docker.pid file and docker.socket
+cat /etc/group | grep docker -- docker etc group
+usermod -a -G docker user -- created user to access docker daemon
+## now ssh server where docker daemon is installed
+## now we can access docker images by 
+docker images
+docker repo -- docker hub -- pre built images
+docker file -- build from scratch -- lines to build base image -- conf file changes-- install dependencies
+docker search <image key word> -- search for docker image from docker repo hub -- check for official and stars
+docker pull hello-world -- pull hello-world docker image
+docker images -- now will have hello-world image and image ID
+docker run hello-world:latest -- latest image is run
+## displays hello from docker
+docker run <image ID> -- can run using image ID
+docker pull centos:centos6 -- pulls centos 6 from docker hub
+docker pull centos -- pulls latest copy of centos available
+docker images 
+## centos centos6 and hello-world -- their image IDs
+docker search nginx:latest
+-- multiple layers -- base conf and layer of base nginx sys -- check docker file for details
+docker inspect <nginx> or <image ID>
+## json on details of config, env path, version, bin/sh startup
+outside daemon mode container, host name -- can build in docker file
+root file system layers, etc,.
+
+docker search whale -- base image in hub for whalesay -- community posts are more
+docker pull docker/whalesay -- original 
+docker run docker/whalesay cowsay hello -- application running on a container which gives the text that we give
+docker ps -- current running docker images
+docker ps -a -- images which were run  
+ifconfig -- 172.17.0.1 to 254 -- ranges of docker images ips
+
+docker run -it centos: latest /bin/bash -- -i<interactive to terminal>t<connected to terminal> gives root privilages
+yum update -- inside my container updates are done not on host
+## online dependencies required for running a particular application
+exit
+and docker images -- shows nothing -- out of container
+docker run -d centos:latest /bin/bash --executed bin bash assigns container id and exits
+docker run -d centos:lastest /bin/bash -e dowhile -- runs do while script until exiting container
+docker run -d nginx:latest -- runs container by disconnected or daemon off assigns container id
+docker ps
+docker inspect <tiny_pasteur> -- name given to that container
+ping <ipaddress> -- cant be pinged because container running
+docker ps -- ports which are exposed 
+su -
+yum install elinks -- text based webbrowser
+docker ps
+elinks http://<ipaddress of nginx container> -- status of that container
+yum install telnet
+telnet localhost 80 -- not doing anything in local host
+elink http://localhost:80 -- nothing, only container running
+
+---------------Create stop Start docker container using base images by disconnected------------------
+docker stop <name of container> -- stops container
+docker ps -- nothing 
+docker ps -a -- check the status of previously started conatiners
+docker -d --name=Myweb1 nginx:latest -- name for that container is changed to myweb1
+docker inspect <Myweb1>
+docker -d --name=Myweb2 nginx:latest -- another container initialized
+docker stop myweb1
+docker stop myweb2
+docker ps -- every container is stopped
+
+------------------------------------Docker container lifecycle----------------------------------------
+docker -d --name=lifecycle1 nginx:latest
+docker attach LifeCycle1
+docker ps -a -- all stopped containers
+docker restart or start <container ID> or <container name> -- restart a container that was stopped
+docker exec /bin/bash Lifecycle1
+docker exec -it lifecycle1 /bin/bash -- runs commands in container like bash even after exiting
+ps aux | grep nginx
+##run nginx in this lifecycle
+exit
+docker ps -- container continues run
+docker stop or start or restart -- to force container to start stop or restart
+
+-------------------------------Image and Container Mgmt-------------------------------------------
+docker images -- list of images
+docker ps -- running images
+docker stop lifecycle1 -- stops containers
+docker rmi centos:centos6 --- using tags delete docker images 
+docker rmi hello-world --- can't remove hello-world because other containers running using this base image
+docker rmi -f hello-world -- removes forcefully by giving names of contianers which you donot need which run this image
+docker ps
+docker rm <contianer name> or <container id> -- remove container
+docker images
+docker rmi helloworld:latest -- cant remove image still
+docker ps -a
+docker rm <name> <name> or <id> <id> -- multiple containers remove
+docker rm 'docker ps -a -q' -- all stopped containers can be removed
+docker ps -a -q --- gives all the <ids> of stopped containers
+docker ps-a -- all stopped containers removed
+##now you can delete base images of stopped containers
+docker rmi hello-world:latest
+
+-----------------------------------Redirection-Ports and Volumes----------------------------------
+docker images -- list of images
+docker run -d nginx:latest --- a name is assigned to this docker container
+## ports are exposed to a ipaddress
+docker inspect <container name> | grep IPAddr
+## gives ipaddress
+elinks http://<ipaddress of container> -- opens run container ngnix site
+elinks http://localhost -- unable to retrieve
+docker ps
+docker stop <name of container>
+docker rm 'docker ps -a -q' -- removes all running docker containers
+docker images
+docker run -d --name=WebServer1 -P nginx:latest ---any ports available on this container should be available on random port(32768 to 65000 ports) on local host 
+docker ps -- ports bound to localhost by random ports
+elinks http://172.17.0.2 -- gives nginx site
+elinks http://localhost:<randomPort created using -P> -- shows ngnix site
+docker ps
+docker port Webserver1 $CONTAINERPORT -- gives random ports created while creating container using -P flag
+docker run -d -p 8080:80 --name:Webserver2 nginx:latest -- bounds port 80 to localhost
+docker ps -- localaddress 8080 are bound to 80
+elinks http://localhost:8080 -- nginx site
+docker stop webserver2
+
+docker run -d -p 8080:80 --name=webserver3 -v /mnt/data ngnix:lates ---create mount of directory in local host onto container
+## you can go to that dir structure and add files in that container
+docker stop webserver3
+mkdir www
+cd www
+vim index.html -- create a html file
+docker run -d -p 8080:80 --name=webserver4 -v home/user/www:/usr/share/ngnix/html nginx:latest
+## created container and you can see that html file in the container where nginx image is used
+elink http://localhost:8080--- index.html runs
+vim index.html -- make change in local host
+elink http:localhost:8080 --- changes will show up in container 
+
+-------------------Create Base Image---------------------
+mkdir Builds
+cd Builds
+docker rm 'docker ps -a -q'
+docker ps -a
+docker ps 
+
+vim Dockerfile:
+FROM debian:stable
+MAINTAINER <DockerHubAccount> <emailID associated>
+RUN apt-get update -- 1 container
+RUN apt-get upgrade --- 2 container
+RUN apt-get install telnet -- 3 container
+
+docker build -t latest123/myapache --- each step is a container
+docker rmi latest123/myapache .
+
+Best practices to write docker file:
+RUN apt-get update && apt-get upgrade -y && apt-get install -y apache2 telnet elinks openssh-server
+##if one install fails it goes to other--- number of containers are not created
+ENV MYVALUE my-value
+docker build -t latest123/myapache
+docker images
+docker run -it latest123/myapahce:latest /bin/bash
+ehco $MYVALUE --- to run a variable specify it in docker file
+
+RUN apt-get update && apt-get upgrade -y && apt-get install -y apache2 telnet elinks openssh-server
+##if one install fails it goes to other--- number of containers are not created
+ENV MYVALUE my-value
+EXPOSE 80
+EXPOSE 22 --- expose those ports to underlying host but not remapped
+CMD ["usr/sbin/apache2ctl","-D","FOREGROUND"]
+docker run -it latest123/myapahce:latest </bin/bash>--no need of bin bash because CMD is there
+
+docker inspect <container name> | grep IPAddr
+elinks http://<ip address of container> -- gives debian logo website
+
+docker exec -it <container name> /bin/bash
+ps aux | grep httpd -- to make sure apache is running
+echo $MYVALUE -- still runs because attached using exec command
+docker ps -- docker image still running
